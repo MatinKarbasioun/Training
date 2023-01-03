@@ -13,6 +13,7 @@ async def asyncReqeust(num):
             names.append(pokemon)
 
             print(pokemon["name"])
+            print(resp.status)
 
     
 async def callAsync():

@@ -1,0 +1,44 @@
+import asyncio
+
+import aiohttp
+
+
+class AsyncClient(AsyncConnectionHandler):
+
+    def __init__(self, logger: ICustomLogger, baseUrls: list, agentId, apiKey: str = None):
+        super().__init__(agentId, logger, baseUrls)
+        self.__apiKey = apiKey
+        self.logger = logger
+
+    def header(self):
+
+        if bool(self.__apiKey):
+            headerContent = {'content-type': 'application/json', 'Api-Key': str(self.__apiKey)}
+
+        else:
+            headerContent = {'content-type': 'application/json'}
+
+        return headerContent
+
+    async def get(self, urlList: list[str]):
+        _header = self.header()
+        tasks = []
+        async with aiohttp.ClientSession(headers=_header) as session:
+            for url in urlList:
+                task = asyncio.ensure_future(self.getConnection(session, url))
+                tasks.append(task)
+            responses = list[await asyncio.gather(*tasks)]
+        return responses
+
+    async def post(self, urlDataList: list[tuple[str, dict]]):
+
+        _header = self.header()
+        tasks = []
+        async with aiohttp.ClientSession(headers=_header) as session:
+            for url, data in urlDataList:
+                task = asyncio.ensure_future(self.postConnection(session, url, data))
+                tasks.append(task)
+            responses = list[await asyncio.gather(*tasks)]
+        return responses
+
+
