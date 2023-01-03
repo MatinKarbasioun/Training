@@ -1,0 +1,69 @@
+from Common.Exception import GetBadRequest, GetServerInternalError, PostBadRequest, PostInternalErrorException
+from Common.Contract.Logger import ICustomLogger
+from aiohttp import ClientSession
+import json
+
+
+class AsyncRequestHandler:
+
+    @classmethod
+    async def getRequest(cls, session: ClientSession, agentId, logger: ICustomLogger, url):
+        try:
+            
+            async with ClientSession.session() as session:
+                
+                async with session.get(url) as response:
+
+                    if response.status < 300:
+                        logger.debug(f'response is {response.json()}', 'RequestHandler', agentId)
+                        return await response.json()
+
+                    elif 300 <= response.status < 400:
+                        logger.debug(f'response is {response.read()} | url: {url}', 'RequestHandler', agentId)
+                        return GetBadRequest(await response.read(), response.status, url)
+
+                    elif 400<= response.status < 500:
+                        logger.debug(f'response is {response.read()} | url: {url}', 'RequestHandler', agentId)
+                        return GetBadRequest(await response.read(), response.status, url)
+
+                    elif 500 <= response.status:
+                        logger.debug(f'response is {response.read()} | url: {url}', 'RequestHandler', agentId)
+                        return GetServerInternalError(response.read(), response.status, url)
+
+                    else:
+                        logger.error(f'response is {response.read()} with status code {response.status}',
+                                    'RequestHandler',
+                                    agentId)
+                        return None
+
+        except Exception as e:
+            logger.error(str(e) + f' | Get Method | Url is: {url}', 'RequestHandler', agentId, e)
+            return None
+
+    @classmethod
+    async def postRequest(cls, session: ClientSession, agentId, logger: ICustomLogger, url, data=None):
+
+        try:
+            async with session.post(url, data=json.dumps(data)) as response:
+
+                if response.status == 200:
+                    logger.debug(f'response is {response.json()}', 'RequestHandler', agentId)
+                    return await response.json()
+
+                elif response.status == 400:
+                    logger.debug(f'response is {response.read()} | url: {url}', 'RequestHandler', agentId)
+                    return PostBadRequest(await response.read(), response.status, url)
+
+                elif response.status == 500:
+                    logger.debug(f'response is {response.read()} | url: {url}', 'RequestHandler', agentId)
+                    return PostInternalErrorException(response.read(), response.status, url)
+
+                else:
+                    logger.error(f'response is {response.read()} with status code {response.status}',
+                                 'RequestHandler',
+                                 agentId)
+                    return None
+
+        except Exception as e:
+            logger.error(str(e) + f' | Get Method | Url is: {url}', 'RequestHandler', agentId, e)
+            return None
